@@ -1,0 +1,3 @@
+node1: cd node1 && vagrant up
+node2: cd node2 && vagrant up
+node3: cd node3 && vagrant up

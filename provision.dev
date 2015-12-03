@@ -1,0 +1,3 @@
+node1: cd node1 && vagrant provision
+node2: cd node2 && vagrant provision
+node3: cd node3 && vagrant provision
