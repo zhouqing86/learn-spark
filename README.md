@@ -188,3 +188,107 @@ sbin/yarn-daemon.sh start nodemanager
 
 
 以上是构建本地学习用的Hadoop集群的步骤。
+
+接下来构建Spark集群。
+1. 下载Scala，并将下载的包放到downloads下
+http://www.scala-lang.org/download/2.10.4.html
+2. 登陆每个节点安装scala
+cd /vagrant_downloads/ && tar zxvf scala-2.10.4.tgz -C /opt/
+vim ~/.bashrc
+export SCALA_HOME=/opt/scala-2.10.4
+export PATH=$SCALA_HOME/bin:$PATH
+
+source ~/.bashrc
+scala -version
+
+3. 下载和配置Spark
+个人经验使用迅雷下载速度快
+http://apache.dataguru.cn/spark/spark-1.5.2/spark-1.5.2-bin-hadoop2.6.tgz
+cd /vagrant_downloads/ && tar zxvf spark-1.5.2-bin-hadoop2.6.tgz -C /opt/
+
+vim ~/.bashrc
+export SPARK_HOME=/opt/spark-1.5.2-bin-hadoop2.6
+export PATH=$SPARK_HOME/bin:$PATH
+
+source ~/.bashrc
+
+配置Spark slaves
+cd $SPARK_HOME/conf
+cp slaves.template slaves
+vim slaves
+修改内容为
+node2
+node3
+
+cp spark-env.sh.template spark-env.sh
+vim spark-env.sh
+
+export SCALA_HOME=/opt/scala-2.10.4
+export JAVA_HOME=/opt/jdk1.7.0_79
+export HADOOP_HOME=/opt/hadoop-2.6.2
+export HADOOP_CONF_DIR=/opt/hadoop-2.6.2/etc/hadoop
+export SPARK_MASTER_IP=node1
+export SPARK_WORKER_MEMORY=1g
+
+启动Spark
+$SPARK_HOME/sbin/start-all.sh
+
+sbin/start-all.sh
+starting org.apache.spark.deploy.master.Master, logging to /opt/spark-1.5.2-bin-hadoop2.6/sbin/../logs/spark-root-org.apache.spark.deploy.master.Master-1-node1.out
+failed to launch org.apache.spark.deploy.master.Master:
+  # An error report file with more information is saved as:
+  # /opt/spark-1.5.2-bin-hadoop2.6/hs_err_pid10438.log
+full log in /opt/spark-1.5.2-bin-hadoop2.6/sbin/../logs/spark-root-org.apache.spark.deploy.master.Master-1-node1.out
+node2: starting org.apache.spark.deploy.worker.Worker, logging to /opt/spark-1.5.2-bin-hadoop2.6/sbin/../logs/spark-root-org.apache.spark.deploy.worker.Worker-1-node2.out
+node3: starting org.apache.spark.deploy.worker.Worker, logging to /opt/spark-1.5.2-bin-hadoop2.6/sbin/../logs/spark-root-org.apache.spark.deploy.worker.Worker-1-node3.out
+
+可以看出内存不足导致，需要修改虚拟机器node1的内存。在node1的Vagrantfile中增加配置
+config.vm.provider "virtualbox" do |v|
+  v.memory = 2048
+  v.cpus = 2
+end
+
+而后vagrant reload
+启动hadoop和spark后，可以查看jps在node1看到master进程，node2和node3中看到Worker进程。
+
+登陆http://node1:8080/ 可以查看spark集群的web页面。
+此时,我们进入 Spark 的 bin 目录,使用“spark-shell”控制台:
+$SPARK_HOME/bin/spark-shell
+此时则可以通过http://node1:4040/environment/查看spark的环境变量。
+至此,Spark集群搭建成功!
+
+4. 测试Spark集群。
+cd $SPARK_HOME;
+hdfs dfs -put README.md /input
+MASTER=spark://node1:7077 $SPARK_HOME/bin/spark-shell
+
+val file=sc.textFile("hdfs://node1:9000/input/README.md")
+
+file.count
+file.first()
+file.filter(lines => lines.contains("Spark")).count
+
+Find the line with the most words:
+file.map(line => line.split(" ").size).reduce((a, b) => if (a > b) a else b)
+This first maps a line to an integer value, creating a new RDD. reduce is called on that RDD to find the largest line count. The arguments to map and reduce are Scala function literals (closures), and can use any language feature or Scala/Java library.
+
+One common data flow pattern is MapReduce, as popularized by Hadoop. Spark can implement MapReduce flows easily:
+val count=file.flatMap(line => line.split(" ")).map(word => (word,1)).reduceByKey(_+_)
+count.collect
+
+
+注意这里文件是存储在hdfs上的，与http://spark.apache.org/docs/latest/quick-start.html例子稍有不同。
+
+
+Spark includes several samples in the examples directory (Scala, Java, Python, R). You can run them as follows:
+```
+# For Scala and Java, use run-example:
+./bin/run-example SparkPi
+
+# For Python examples, use spark-submit directly:
+./bin/spark-submit examples/src/main/python/pi.py
+
+# For R examples, use spark-submit directly:
+./bin/spark-submit examples/src/main/r/dataframe.R
+
+```
