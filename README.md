@@ -292,3 +292,14 @@ Spark includes several samples in the examples directory (Scala, Java, Python, R
 ./bin/spark-submit examples/src/main/r/dataframe.R
 
 ```
+
+5. Spark集群开发
+http://mmicky.blog.163.com/blog/static/150290154201431410313342/
+开发时建议本地起Spark服务。我链接远端的QA环境一直失败，猜测是路径不一致造成的。
+
+使用IDEA开发SPARK提交remote cluster执行:
+http://www.cnblogs.com/gaoxing/p/4414362.html
+注意的一点是：选择scala版本，需要spark的scala版本对应
+
+Spark通过IntelliJ IDEA远程调试
+http://www.aboutyun.com/thread-9877-1-1.html
